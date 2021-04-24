@@ -164,3 +164,88 @@ impl<T> Producer<T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    extern crate std;
+
+    #[test]
+    fn multithreaded() {
+        let (mut producer, mut consumer) = Queue::new().split();
+
+        let thread1 = std::thread::spawn(move || {
+            for _ in 0..10000 {
+                producer.push(Node::new(false));
+            }
+
+            producer.push(Node::new(true));
+        });
+
+        let thread2 = std::thread::spawn(move || {
+            let mut counter = 0;
+
+            loop {
+                if let Some(node) = consumer.pop() {
+                    if *node {
+                        break;
+                    } else {
+                        counter += 1;
+                    }
+                }
+            }
+
+            assert_eq!(counter, 10000);
+        });
+
+        thread1.join().unwrap();
+        thread2.join().unwrap();
+    }
+
+    #[test]
+    fn multiple_queues() {
+        let (mut producer1, mut consumer1) = Queue::new().split();
+        let (mut producer2, mut consumer2) = Queue::new().split();
+
+        for _ in 0..10000 {
+            producer1.push(Node::new(()));
+        }
+
+        let mut counter = 0;
+        while let Some(node) = consumer1.pop() {
+            producer2.push(node);
+            counter += 1;
+        }
+        assert_eq!(counter, 10000);
+
+        let mut counter = 0;
+        while let Some(_) = consumer2.pop() {
+            counter += 1;
+        }
+        assert_eq!(counter, 10000);
+    }
+
+    #[test]
+    fn drop_occurs() {
+        struct S(Arc<Cell<usize>>);
+
+        impl Drop for S {
+            fn drop(&mut self) {
+                self.0.set(self.0.get() + 1);
+            }
+        }
+
+        let (mut producer, mut consumer) = Queue::new().split();
+
+        let counter = Arc::new(Cell::new(0));
+
+        for _ in 0..10000 {
+            producer.push(Node::new(S(counter.clone())));
+        }
+
+        while let Some(_) = consumer.pop() {}
+
+        assert_eq!(counter.get(), 10000);
+    }
+}
