@@ -1,3 +1,53 @@
+//! A wait-free single-producer single-consumer linked-list queue with
+//! individually reusable nodes.
+//!
+//! Queue operations ([`Producer::push()`] and [`Consumer::pop()`]) do not
+//! block or allocate memory. Individual [`Node`]s are allocated and managed
+//! separately, and can be reused on multiple queues.
+//!
+//! # Examples
+//!
+//! Using a queue to send values between threads:
+//!
+//! ```
+//! use llq::{Node, Queue};
+//!
+//! let (mut producer, mut consumer) = Queue::<usize>::new().split();
+//!
+//! producer.push(Node::new(0));
+//! producer.push(Node::new(1));
+//! producer.push(Node::new(2));
+//!
+//! std::thread::spawn(move || {
+//!     assert_eq!(*consumer.pop().unwrap(), 0);
+//!     assert_eq!(*consumer.pop().unwrap(), 1);
+//!     assert_eq!(*consumer.pop().unwrap(), 2);
+//!     assert!(consumer.pop().is_none());
+//! }).join().unwrap();
+//!
+//! ```
+//!
+//! Reusing a node between multiple queues:
+//!
+//! ```
+//! use llq::{Node, Queue};
+//!
+//! let (mut producer1, mut consumer1) = Queue::<usize>::new().split();
+//! let (mut producer2, mut consumer2) = Queue::<usize>::new().split();
+//!
+//! let node = Node::new(3);
+//! producer1.push(node);
+//! let node = consumer1.pop().unwrap();
+//! producer2.push(node);
+//! let node = consumer2.pop().unwrap();
+//!
+//! assert_eq!(*node, 3);
+//! ```
+//!
+//! [`Producer::push()`]: crate::Producer::push
+//! [`Consumer::pop()`]: crate::Consumer::pop
+//! [`Node`]: crate::Node
+
 #![no_std]
 
 extern crate alloc;
@@ -13,6 +63,9 @@ use core::ptr;
 use core::ptr::NonNull;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
+/// An individual node which may be pushed onto and popped from a [`Queue`].
+///
+/// [`Queue`]: crate::Queue
 pub struct Node<T> {
     inner: NonNull<NodeInner<T>>,
     phantom: PhantomData<T>,
@@ -27,6 +80,7 @@ struct NodeInner<T> {
 }
 
 impl<T> Node<T> {
+    /// Allocates a new node containing the given value.
     pub fn new(data: T) -> Node<T> {
         Node {
             inner: unsafe {
@@ -39,6 +93,7 @@ impl<T> Node<T> {
         }
     }
 
+    /// Deallocates a `Node` and returns the inner value.
     pub fn into_inner(this: Node<T>) -> T {
         unsafe {
             let data = ptr::read(this.inner.as_ref().data.as_ptr());
@@ -72,6 +127,7 @@ impl<T> Drop for Node<T> {
     }
 }
 
+/// A wait-free SPSC linked-list queue.
 pub struct Queue<T> {
     head: Cell<*mut NodeInner<T>>,
     phantom: PhantomData<T>,
@@ -80,6 +136,7 @@ pub struct Queue<T> {
 unsafe impl<T: Send> Send for Queue<T> {}
 
 impl<T> Queue<T> {
+    /// Creates a new queue.
     pub fn new() -> Queue<T> {
         let node = Box::into_raw(Box::new(NodeInner {
             next: AtomicPtr::new(ptr::null_mut()),
@@ -89,6 +146,7 @@ impl<T> Queue<T> {
         Queue { head: Cell::new(node), phantom: PhantomData }
     }
 
+    /// Splits a queue into its producer and consumer halves.
     pub fn split(self) -> (Producer<T>, Consumer<T>) {
         let queue = Arc::new(self);
 
@@ -117,6 +175,9 @@ impl<T> Drop for Queue<T> {
     }
 }
 
+/// The consumer half of a [`Queue`].
+///
+/// [`Queue`]: crate::Queue
 pub struct Consumer<T> {
     queue: Arc<Queue<T>>,
 }
@@ -124,6 +185,8 @@ pub struct Consumer<T> {
 unsafe impl<T: Send> Send for Consumer<T> {}
 
 impl<T> Consumer<T> {
+    /// Attempts to remove and return an element from the queue. Returns `None`
+    /// if the queue is empty.
     pub fn pop(&mut self) -> Option<Node<T>> {
         unsafe {
             let head = self.queue.head.get();
@@ -143,6 +206,9 @@ impl<T> Consumer<T> {
     }
 }
 
+/// The producer half of a [`Queue`].
+///
+/// [`Queue`]: crate::Queue
 pub struct Producer<T> {
     #[allow(unused)]
     queue: Arc<Queue<T>>,
@@ -152,6 +218,7 @@ pub struct Producer<T> {
 unsafe impl<T: Send> Send for Producer<T> {}
 
 impl<T> Producer<T> {
+    /// Adds an element to the queue.
     pub fn push(&mut self, node: Node<T>) {
         unsafe {
             let node_ptr = node.inner.as_ptr();
