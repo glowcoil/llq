@@ -9,7 +9,7 @@
 //!
 //! Using a queue to send values between threads:
 //!
-//! ```
+//! ```rust
 //! use llq::{Node, Queue};
 //!
 //! let (mut producer, mut consumer) = Queue::<usize>::new().split();
@@ -29,7 +29,7 @@
 //!
 //! Reusing a node between multiple queues:
 //!
-//! ```
+//! ```rust
 //! use llq::{Node, Queue};
 //!
 //! let (mut producer1, mut consumer1) = Queue::<usize>::new().split();

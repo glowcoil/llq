@@ -3,5 +3,9 @@ name = "llq"
 version = "0.1.0"
 authors = ["Micah Johnston <micah@glowcoil.com>"]
 edition = "2018"
+description = "Wait-free SPSC linked-list queue with individually reusable nodes"
+repository = "https://github.com/glowcoil/llq"
+readme = "README.md"
+license = "MIT/Apache-2.0"
 
 [dependencies]
