@@ -5,7 +5,7 @@
 
 A wait-free single-producer single-consumer linked-list queue with individually reusable nodes.
 
-`llq` provides smart pointers analogous to `Box` and `Arc` which mark their contents for deferred collection on another thread rather than immediately freeing it, making them safe to drop on a real-time thread.
+Queue operations do not block or allocate memory. Individual nodes are allocated and managed separately, and can be reused on multiple queues.
 
 # Examples
 
