@@ -39,11 +39,11 @@ impl<T> Node<T> {
         }
     }
 
-    pub fn into_inner(self) -> T {
+    pub fn into_inner(this: Node<T>) -> T {
         unsafe {
-            let data = ptr::read(self.inner.as_ref().data.as_ptr());
-            drop(Box::from_raw(self.inner.as_ptr()));
-            mem::forget(self);
+            let data = ptr::read(this.inner.as_ref().data.as_ptr());
+            drop(Box::from_raw(this.inner.as_ptr()));
+            mem::forget(this);
             data
         }
     }
