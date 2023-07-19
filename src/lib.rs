@@ -154,7 +154,7 @@ impl<T> Queue<T> {
     pub fn split(self) -> (Producer<T>, Consumer<T>) {
         let queue = Arc::new(self);
 
-        let producer = Producer { queue: queue.clone(), tail: queue.head.get() };
+        let producer = Producer { queue: Arc::clone(&queue), tail: queue.head.get() };
         let consumer = Consumer { queue };
 
         (producer, consumer)
@@ -318,7 +318,7 @@ mod tests {
         let counter = Arc::new(Cell::new(0));
 
         for _ in 0..10000 {
-            producer.push(Node::new(S(counter.clone())));
+            producer.push(Node::new(S(Arc::clone(&counter))));
         }
 
         while let Some(_) = consumer.pop() {}
