@@ -7,7 +7,7 @@ A wait-free single-producer single-consumer linked-list queue with individually 
 
 Queue operations do not block or allocate memory. Individual nodes are allocated and managed separately, and can be reused on multiple queues.
 
-# Examples
+## Examples
 
 Using a queue to send values between threads:
 
@@ -45,10 +45,6 @@ let node = consumer2.pop().unwrap();
 
 assert_eq!(*node, 3);
 ```
-
-[`Producer::push()`]: crate::Producer::push
-[`Consumer::pop()`]: crate::Consumer::pop
-[`Node`]: crate::Node
 
 ## License
 
