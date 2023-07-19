@@ -49,6 +49,12 @@
 //! [`Node`]: crate::Node
 
 #![no_std]
+#![warn(rust_2018_idioms)]
+#![warn(rust_2021_compatibility)]
+#![warn(unreachable_pub)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::clone_on_ref_ptr)]
+#![warn(rustdoc::broken_intra_doc_links)]
 
 extern crate alloc;
 
@@ -267,9 +273,8 @@ mod tests {
                 if let Some(node) = consumer.pop() {
                     if *node {
                         break;
-                    } else {
-                        counter += 1;
                     }
+                    counter += 1;
                 }
             }
 
@@ -297,7 +302,7 @@ mod tests {
         assert_eq!(counter, 10000);
 
         let mut counter = 0;
-        while let Some(_) = consumer2.pop() {
+        while consumer2.pop().is_some() {
             counter += 1;
         }
         assert_eq!(counter, 10000);
@@ -321,7 +326,7 @@ mod tests {
             producer.push(Node::new(S(Arc::clone(&counter))));
         }
 
-        while let Some(_) = consumer.pop() {}
+        while consumer.pop().is_some() {}
 
         assert_eq!(counter.get(), 10000);
     }
