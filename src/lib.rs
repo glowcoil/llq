@@ -81,6 +81,7 @@ struct NodeInner<T> {
 
 impl<T> Node<T> {
     /// Allocates a new node containing the given value.
+    #[must_use]
     pub fn new(data: T) -> Node<T> {
         Node {
             inner: unsafe {
@@ -94,6 +95,7 @@ impl<T> Node<T> {
     }
 
     /// Deallocates a `Node` and returns the inner value.
+    #[must_use]
     pub fn into_inner(this: Node<T>) -> T {
         unsafe {
             let data = ptr::read(this.inner.as_ref().data.as_ptr());
@@ -137,6 +139,7 @@ unsafe impl<T: Send> Send for Queue<T> {}
 
 impl<T> Queue<T> {
     /// Creates a new queue.
+    #[must_use]
     pub fn new() -> Queue<T> {
         let node = Box::into_raw(Box::new(NodeInner {
             next: AtomicPtr::new(ptr::null_mut()),
@@ -147,6 +150,7 @@ impl<T> Queue<T> {
     }
 
     /// Splits a queue into its producer and consumer halves.
+    #[must_use]
     pub fn split(self) -> (Producer<T>, Consumer<T>) {
         let queue = Arc::new(self);
 
