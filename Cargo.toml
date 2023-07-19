@@ -2,7 +2,7 @@
 name = "llq"
 version = "0.1.1"
 authors = ["Micah Johnston <micah@glowcoil.com>"]
-edition = "2018"
+edition = "2021"
 description = "Wait-free SPSC linked-list queue with individually reusable nodes"
 repository = "https://github.com/glowcoil/llq"
 readme = "README.md"
