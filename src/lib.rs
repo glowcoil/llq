@@ -49,6 +49,12 @@
 //! [`Node`]: crate::Node
 
 #![no_std]
+#![warn(rust_2018_idioms)]
+#![warn(rust_2021_compatibility)]
+#![warn(unreachable_pub)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::clone_on_ref_ptr)]
+#![warn(rustdoc::broken_intra_doc_links)]
 
 extern crate alloc;
 
@@ -81,6 +87,7 @@ struct NodeInner<T> {
 
 impl<T> Node<T> {
     /// Allocates a new node containing the given value.
+    #[must_use]
     pub fn new(data: T) -> Node<T> {
         Node {
             inner: unsafe {
@@ -94,6 +101,7 @@ impl<T> Node<T> {
     }
 
     /// Deallocates a `Node` and returns the inner value.
+    #[must_use]
     pub fn into_inner(this: Node<T>) -> T {
         unsafe {
             let data = ptr::read(this.inner.as_ref().data.as_ptr());
@@ -137,6 +145,7 @@ unsafe impl<T: Send> Send for Queue<T> {}
 
 impl<T> Queue<T> {
     /// Creates a new queue.
+    #[must_use]
     pub fn new() -> Queue<T> {
         let node = Box::into_raw(Box::new(NodeInner {
             next: AtomicPtr::new(ptr::null_mut()),
@@ -147,13 +156,20 @@ impl<T> Queue<T> {
     }
 
     /// Splits a queue into its producer and consumer halves.
+    #[must_use]
     pub fn split(self) -> (Producer<T>, Consumer<T>) {
         let queue = Arc::new(self);
 
-        let producer = Producer { queue: queue.clone(), tail: queue.head.get() };
+        let producer = Producer { queue: Arc::clone(&queue), tail: queue.head.get() };
         let consumer = Consumer { queue };
 
         (producer, consumer)
+    }
+}
+
+impl<T> Default for Queue<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -257,9 +273,8 @@ mod tests {
                 if let Some(node) = consumer.pop() {
                     if *node {
                         break;
-                    } else {
-                        counter += 1;
                     }
+                    counter += 1;
                 }
             }
 
@@ -287,7 +302,7 @@ mod tests {
         assert_eq!(counter, 10000);
 
         let mut counter = 0;
-        while let Some(_) = consumer2.pop() {
+        while consumer2.pop().is_some() {
             counter += 1;
         }
         assert_eq!(counter, 10000);
@@ -308,10 +323,10 @@ mod tests {
         let counter = Arc::new(Cell::new(0));
 
         for _ in 0..10000 {
-            producer.push(Node::new(S(counter.clone())));
+            producer.push(Node::new(S(Arc::clone(&counter))));
         }
 
-        while let Some(_) = consumer.pop() {}
+        while consumer.pop().is_some() {}
 
         assert_eq!(counter.get(), 10000);
     }
