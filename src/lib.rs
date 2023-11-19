@@ -127,6 +127,18 @@ impl<T> Drop for Node<T> {
     }
 }
 
+impl<T: core::fmt::Debug> core::fmt::Debug for Node<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        f.debug_struct("Node").field("value", &**self).finish()
+    }
+}
+
+impl<T: core::fmt::Display> core::fmt::Display for Node<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+        (**self).fmt(f)
+    }
+}
+
 /// A wait-free SPSC linked-list queue.
 pub struct Queue<T> {
     head: Cell<*mut NodeInner<T>>,
@@ -314,5 +326,12 @@ mod tests {
         while let Some(_) = consumer.pop() {}
 
         assert_eq!(counter.get(), 10000);
+    }
+
+    #[test]
+    fn fmt_display_debug() {
+        let node = Node::new(42);
+        assert_eq!("42", &alloc::format!("{}", node));
+        assert_eq!("Node { value: 42 }", &alloc::format!("{:?}", node));
     }
 }
